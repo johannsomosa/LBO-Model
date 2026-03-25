@@ -1,0 +1,86 @@
+:root {
+  --green-primary: #0f7a5c;
+  --green-dark: #0b5e47;
+  --white: #ffffff;
+  --text-dark: #1a1a1a;
+  --border-light: #e5e5e5;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  background: var(--green-primary);
+  color: var(--text-dark);
+}
+
+.navbar {
+  padding: 1rem;
+  background: var(--green-dark);
+}
+
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  border-radius: 50%;
+  background: white;
+  padding: 4px;
+}
+
+.brand-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: white;
+}
+
+.container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+.card {
+  background: var(--white);
+  padding: 1.25rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-light);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+input {
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-light);
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--green-dark);
+  box-shadow: 0 0 0 2px rgba(11, 94, 71, 0.15);
+}
+
+#outputValue {
+  font-weight: bold;
+  color: var(--green-dark);
+}
+
+canvas {
+  background: var(--white);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+@media (max-width: 768px) {
+  .container {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LBO Financial Model</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&family=Poppins:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@700;800;900&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* ─── DESIGN TOKENS ─────────────────────────────────────────────── */
+:root {
+  --c60:           #ffffff;
+  --c30:           #00512a;
+  --c10:           #e7d236;
+
+  --c30-light:     #e8f3ed;
+  --c30-mid:       #c2dece;
+  --c30-dim:       rgba(0,81,42,0.07);
+  --c30-border:    rgba(0,81,42,0.16);
+  --c10-dim:       rgba(231,210,54,0.20);
+  --c10-border:    rgba(231,210,54,0.55);
+
+  --text-primary:   #0a1a0f;
+  --text-secondary: #2d5e3a;
+  --text-muted:     #6b8f77;
+  --text-faint:     #aac4b3;
+
+  --border:         #dde8e1;
+  --border-strong:  #b5cebe;
+  --shadow-sm:      0 1px 4px rgba(0,81,42,0.07);
+  --shadow-md:      0 4px 18px rgba(0,81,42,0.11);
+
+  --font-title:  'Open Sans', sans-serif;
+  --font-kpi:    'Plus Jakarta Sans', sans-serif;
+  --font-body:   'Poppins', sans-serif;
+  --radius:      8px;
+  --radius-lg:   12px;
+  --radius-xl:   16px;
+  --tr:          0.17s ease;
+}
+
+/* ─── RESET ─────────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{
+  font-family:var(--font-body);
+  background:var(--c60);
+  color:var(--text-primary);
+  min-height:100vh;
+  font-size:13px;
+  overflow-x:hidden;
+}
+
+/* ─── TOPBAR ─────────────────────────────────────────────────────── */
+.topbar{
+  position:sticky;top:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 32px;height:60px;
+  background:var(--c30);
+  box-shadow:0 2px 14px rgba(0,81,42,0.22);
+}
+.topbar-logo{
+  font-family:var(--font-title);
+  font-size:22px;font-weight:800;letter-spacing:-0.01em;
+  color:#ffffff;
+  display:flex;align-items:center;gap:10px;
+}
+.logo-accent{color:var(--c10);}
+.logo-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--c10);box-shadow:0 0 10px var(--c10);
+  animation:blink 2.4s infinite;
+}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
+
+.topbar-right{display:flex;align-items:center;gap:14px;}
+.case-toggle{
+  display:flex;
+  background:rgba(255,255,255,0.10);
+  border:1px solid rgba(255,255,255,0.18);
+  border-radius:var(--radius);overflow:hidden;
+}
+.case-btn{
+  padding:6px 16px;
+  font-family:var(--font-body);font-size:11px;font-weight:600;
+  letter-spacing:0.05em;text-transform:uppercase;
+  cursor:pointer;border:none;background:transparent;
+  color:rgba(255,255,255,0.50);transition:var(--tr);
+}
+.case-btn:hover:not(.active-conservative):not(.active-base):not(.active-best){
+  color:rgba(255,255,255,0.85);background:rgba(255,255,255,0.08);
+}
+.case-btn.active-conservative{background:rgba(231,210,54,0.22);color:var(--c10);}
+.case-btn.active-base{background:rgba(255,255,255,0.18);color:#ffffff;}
+.case-btn.active-best{background:rgba(231,210,54,0.32);color:var(--c10);}
+
+.recalc-btn{
+  padding:7px 20px;
+  font-family:var(--font-body);font-size:11px;font-weight:600;
+  letter-spacing:0.05em;text-transform:uppercase;
+  cursor:pointer;
+  border:1.5px solid var(--c10);
+  background:var(--c10);color:var(--c30);
+  border-radius:var(--radius);transition:var(--tr);
+}
+.recalc-btn:hover{background:#f0dc3a;border-color:#f0dc3a;}
+
+/* ─── APP ────────────────────────────────────────────────────────── */
+.app{
+  max-width:1640px;margin:0 auto;
+  padding:28px 32px 52px;
+  animation:fadeUp 0.4s ease forwards;
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+
+/* ─── KPI STRIP ──────────────────────────────────────────────────── */
+.kpi-strip{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:16px;margin-bottom:28px;
+}
+.kpi-card{
+  background:var(--c60);
+  border:1.5px solid var(--border);
+  border-radius:var(--radius-xl);
+  padding:22px 26px;
+  box-shadow:var(--shadow-sm);
+  transition:box-shadow var(--tr),transform var(--tr);
+  position:relative;overflow:hidden;
+}
+.kpi-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);}
+.kpi-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+}
+.kpi-card.irr::before    {background:var(--c30);}
+.kpi-card.moic::before   {background:var(--c10);}
+.kpi-card.payback::before{background:var(--c30-mid);}
+
+.kpi-label{
+  font-family:var(--font-kpi);font-size:10px;font-weight:800;
+  letter-spacing:0.16em;text-transform:uppercase;
+  color:var(--text-muted);margin-bottom:10px;
+}
+.kpi-value{
+  font-family:var(--font-kpi);font-size:38px;font-weight:900;
+  line-height:1;letter-spacing:-0.02em;
+  color:var(--text-primary);
+}
+.kpi-card.irr    .kpi-value{color:var(--c30);}
+.kpi-card.moic   .kpi-value{color:#7a6b00;}
+.kpi-card.payback .kpi-value{color:var(--c30);}
+.kpi-sub{font-size:11px;color:var(--text-muted);margin-top:7px;}
+
+/* ─── SECTION LABEL ──────────────────────────────────────────────── */
+.section-label{
+  font-family:var(--font-body);font-size:10px;font-weight:700;
+  letter-spacing:0.16em;text-transform:uppercase;
+  color:var(--text-muted);
+  margin-bottom:14px;display:flex;align-items:center;gap:10px;
+}
+.section-label::before{
+  content:'';width:4px;height:14px;
+  background:var(--c30);border-radius:2px;flex-shrink:0;
+}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* ─── MAIN GRID ──────────────────────────────────────────────────── */
+.main-grid{
+  display:grid;grid-template-columns:340px 1fr;
+  gap:22px;align-items:start;
+}
+
+/* ─── PANEL CARD ─────────────────────────────────────────────────── */
+.input-panel{display:flex;flex-direction:column;gap:16px;}
+.panel-card{
+  background:var(--c60);
+  border:1.5px solid var(--border);
+  border-radius:var(--radius-xl);
+  overflow:hidden;box-shadow:var(--shadow-sm);
+}
+.panel-header{
+  padding:13px 18px;background:var(--c30);
+  display:flex;align-items:center;justify-content:space-between;
+  font-family:var(--font-body);font-size:12px;font-weight:700;
+  letter-spacing:0.07em;text-transform:uppercase;
+  color:rgba(255,255,255,0.92);
+}
+.badge{font-size:9px;padding:2px 8px;border-radius:20px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;}
+.badge-open {background:rgba(231,210,54,0.25);color:var(--c10);border:1px solid rgba(231,210,54,0.5);}
+.badge-fixed{background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);border:1px solid rgba(255,255,255,0.2);}
+.badge-mixed{background:rgba(231,210,54,0.18);color:var(--c10);border:1px solid rgba(231,210,54,0.35);}
+
+.panel-body{padding:16px 18px;display:flex;flex-direction:column;gap:9px;}
+
+/* ─── INPUT ROW ──────────────────────────────────────────────────── */
+.input-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;}
+.input-row label{font-size:12px;font-weight:400;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.input-row.locked label{color:var(--text-faint);}
+.field-wrap{position:relative;display:flex;align-items:center;}
+.field-prefix,.field-suffix{position:absolute;font-size:11px;color:var(--text-muted);pointer-events:none;z-index:1;font-family:var(--font-body);}
+.field-prefix{left:9px;}.field-suffix{right:9px;}
+
+input[type="number"],input[type="text"],select{
+  background:var(--c30-dim);
+  border:1.5px solid var(--border);
+  border-radius:var(--radius);
+  color:var(--text-primary);
+  font-family:var(--font-body);font-size:12px;font-weight:600;
+  height:32px;width:120px;text-align:right;padding:0 10px;
+  outline:none;transition:border-color var(--tr),box-shadow var(--tr);
+  -moz-appearance:textfield;
+}
+input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;}
+input[type="number"]:focus,input[type="text"]:focus,select:focus{
+  border-color:var(--c30);box-shadow:0 0 0 3px var(--c30-dim);
+}
+input.has-prefix{padding-left:20px;}
+input.has-suffix{padding-right:24px;}
+input[readonly],input[disabled]{
+  color:var(--text-faint);cursor:not-allowed;
+  border-color:var(--border);background:#f8faf9;font-weight:400;
+}
+select{
+  text-align:left;cursor:pointer;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2300512a'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;
+}
+.input-divider{height:1px;background:var(--border);margin:4px 0;}
+
+/* ─── DERIVED ROW ────────────────────────────────────────────────── */
+.derived-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;}
+.derived-row label{font-size:11px;color:var(--text-muted);font-style:italic;font-weight:400;}
+.derived-value{font-size:13px;font-weight:700;color:var(--c30);width:120px;text-align:right;padding:0 10px;}
+
+/* ─── DEBT TRANCHES ──────────────────────────────────────────────── */
+.tranche-list{display:flex;flex-direction:column;gap:10px;}
+.tranche-item{
+  background:var(--c30-dim);border:1.5px solid var(--c30-border);
+  border-radius:var(--radius);padding:11px 13px;
+}
+.tranche-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;}
+.tranche-name{font-size:11px;font-weight:700;color:var(--c30);text-transform:uppercase;letter-spacing:0.07em;}
+.tranche-remove{
+  width:20px;height:20px;border-radius:50%;
+  border:1.5px solid var(--border-strong);background:var(--c60);
+  color:#b04040;cursor:pointer;font-size:14px;
+  display:flex;align-items:center;justify-content:center;
+  transition:var(--tr);line-height:1;
+}
+.tranche-remove:hover{background:#fdf0f0;border-color:#b04040;}
+.tranche-fields{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;}
+.tranche-field label{font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;font-weight:500;}
+.tranche-field input{width:100%;font-size:11px;height:28px;}
+.add-tranche-row{display:flex;gap:8px;align-items:center;}
+.add-tranche-select{flex:1;width:auto;text-align:left;}
+.add-tranche-btn{
+  padding:6px 14px;font-family:var(--font-body);font-size:11px;font-weight:600;
+  border:1.5px solid var(--c30);background:var(--c30);color:#fff;
+  border-radius:var(--radius);cursor:pointer;transition:var(--tr);white-space:nowrap;
+}
+.add-tranche-btn:hover{background:#006335;}
+
+/* ─── CHART CARDS ────────────────────────────────────────────────── */
+.charts-panel{display:flex;flex-direction:column;gap:18px;}
+.charts-row{display:grid;gap:18px;}
+.charts-row-2{grid-template-columns:1fr 1fr;}
+
+.chart-card{
+  background:var(--c60);border:1.5px solid var(--border);
+  border-radius:var(--radius-xl);padding:22px 24px;
+  box-shadow:var(--shadow-sm);transition:box-shadow var(--tr);
+}
+.chart-card:hover{box-shadow:var(--shadow-md);}
+.chart-title{
+  font-family:var(--font-body);font-size:13px;font-weight:700;
+  color:var(--text-primary);margin-bottom:18px;
+  display:flex;align-items:center;gap:8px;
+}
+.chart-title::before{
+  content:'';width:3px;height:14px;
+  background:var(--c10);border-radius:2px;flex-shrink:0;
+}
+.chart-wrap canvas{max-width:100%;}
+
+/* ─── SOURCES & USES ─────────────────────────────────────────────── */
+.su-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start;}
+.su-block h4{
+  font-size:10px;font-weight:700;letter-spacing:0.13em;text-transform:uppercase;
+  color:var(--c30);margin-bottom:10px;padding-bottom:7px;
+  border-bottom:2px solid var(--c30-mid);
+}
+.su-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:5px 0;border-bottom:1px solid var(--border);
+  font-size:12px;font-family:var(--font-body);
+}
+.su-row span:first-child{color:var(--text-secondary);font-weight:400;}
+.su-row span:last-child{color:var(--text-primary);font-weight:600;}
+.su-total{display:flex;justify-content:space-between;padding:9px 0 0;font-weight:700;font-size:13px;}
+.su-total span:first-child{color:var(--text-muted);}
+.su-total span:last-child{color:var(--c30);}
+
+/* ─── OUTPUT TABLE ───────────────────────────────────────────────── */
+.output-table{width:100%;border-collapse:collapse;font-size:12px;font-family:var(--font-body);}
+.output-table th{
+  font-size:10px;font-weight:700;letter-spacing:0.10em;text-transform:uppercase;
+  color:var(--text-muted);padding:8px 12px;text-align:right;
+  background:#f4f8f5;border-bottom:2px solid var(--c30-mid);
+}
+.output-table th:first-child{text-align:left;}
+.output-table td{padding:7px 12px;text-align:right;color:var(--text-primary);border-bottom:1px solid var(--border);}
+.output-table td:first-child{text-align:left;color:var(--text-secondary);}
+.output-table tr:hover td{background:#f7fbf8;}
+.output-table .row-total td{font-weight:700;color:var(--c30);border-top:2px solid var(--c30-mid);background:var(--c30-dim);}
+.output-table .row-highlight td{background:#f2f8f4;}
+.is-section td:first-child{padding-left:26px;color:var(--text-muted);font-size:11px;}
+.is-subtotal td{border-top:1px solid var(--c30-mid);font-weight:600;background:#f7fbf8;}
+.is-subtotal td:not(:first-child){color:var(--c30);}
+
+/* ─── SENSITIVITY TABLE ──────────────────────────────────────────── */
+.sensitivity-wrap{overflow-x:auto;}
+.sens-table{width:100%;border-collapse:collapse;font-size:12px;font-family:var(--font-body);}
+.sens-table th,.sens-table td{padding:8px 14px;text-align:center;border:1px solid var(--border);}
+.sens-table th{font-size:10px;text-transform:uppercase;letter-spacing:0.09em;color:var(--text-muted);background:#f4f8f5;font-weight:700;}
+.sens-axis{color:var(--c30);font-weight:700;background:#f0f7f3!important;}
+.heat-low {background:rgba(210,50,50,0.10);color:#a02020;font-weight:600;}
+.heat-mid {background:rgba(231,210,54,0.22);color:#6b5a00;font-weight:600;}
+.heat-high{background:rgba(0,81,42,0.10);color:var(--c30);font-weight:600;}
+.heat-best{background:rgba(0,81,42,0.22);color:var(--c30);font-weight:700;}
+
+/* ─── FOOTNOTE ───────────────────────────────────────────────────── */
+.footnote{
+  margin-top:36px;padding:16px 22px;
+  background:var(--c30-dim);border:1.5px solid var(--c30-border);
+  border-radius:var(--radius-lg);
+  font-size:11px;color:var(--text-muted);line-height:1.7;
+}
+
+/* ─── SCROLLBAR ──────────────────────────────────────────────────── */
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:#f4f8f5;}
+::-webkit-scrollbar-thumb{background:var(--c30-mid);border-radius:3px;}
+
+/* ─── RESPONSIVE ─────────────────────────────────────────────────── */
+@media(max-width:1100px){.main-grid{grid-template-columns:1fr;}.kpi-strip{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:700px){.kpi-strip{grid-template-columns:1fr 1fr;}.charts-row-2{grid-template-columns:1fr;}.su-grid{grid-template-columns:1fr;}.topbar{padding:0 16px;}.app{padding:18px 16px 40px;}}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-logo">
+    <div class="logo-dot"></div>
+    LBO<span class="logo-accent">&nbsp;Model</span>
+  </div>
+  <div class="topbar-right">
+    <div class="case-toggle">
+      <button class="case-btn" id="btn-conservative" onclick="setCase('conservative')">Conservative</button>
+      <button class="case-btn active-base" id="btn-base" onclick="setCase('base')">Base</button>
+      <button class="case-btn" id="btn-best" onclick="setCase('best')">Best</button>
+    </div>
+    <button class="recalc-btn" onclick="recalculate()">⟳ Recalculate</button>
+  </div>
+</header>
+
+<div class="app">
+
+  <!-- KPI STRIP -->
+  <div class="kpi-strip">
+    <div class="kpi-card irr">
+      <div class="kpi-label">Equity IRR</div>
+      <div class="kpi-value" id="kpi-irr">—</div>
+      <div class="kpi-sub">Internal Rate of Return</div>
+    </div>
+    <div class="kpi-card moic">
+      <div class="kpi-label">MOIC</div>
+      <div class="kpi-value" id="kpi-moic">—</div>
+      <div class="kpi-sub">Multiple on Invested Capital</div>
+    </div>
+    <div class="kpi-card payback">
+      <div class="kpi-label">Payback Period</div>
+      <div class="kpi-value" id="kpi-payback">—</div>
+      <div class="kpi-sub">Years to recover equity</div>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="main-grid">
+
+    <!-- LEFT INPUT PANEL -->
+    <div class="input-panel">
+
+      <!-- 1. TRANSACTION STRUCTURE -->
+      <div class="panel-card">
+        <div class="panel-header">Transaction Structure <span class="badge badge-mixed">Mixed</span></div>
+        <div class="panel-body">
+          <div class="input-row">
+            <label>Offer Price per Share</label>
+            <div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="offer-price" class="has-prefix" value="42.00" step="0.50" oninput="softCalc()" /></div>
+          </div>
+          <div class="input-row">
+            <label>Shares Outstanding (M)</label>
+            <div class="field-wrap"><input type="number" id="shares-out" value="120" step="1" oninput="softCalc()" /></div>
+          </div>
+          <div class="input-row">
+            <label>Net Debt at Entry ($M)</label>
+            <div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="net-debt-entry" class="has-prefix" value="850" step="10" oninput="softCalc()" /></div>
+          </div>
+          <div class="input-row">
+            <label>Management Rollover</label>
+            <div class="field-wrap"><input type="number" id="mgmt-rollover" value="5.0" step="0.5" oninput="softCalc()" /><span class="field-suffix">%</span></div>
+          </div>
+          <div class="input-divider"></div>
+          <div class="derived-row"><label>Equity Value ($M)</label><div class="derived-value" id="d-equity-val">—</div></div>
+          <div class="derived-row"><label>Enterprise Value ($M)</label><div class="derived-value" id="d-ev">—</div></div>
+          <div class="derived-row"><label>Entry EBITDA Multiple</label><div class="derived-value" id="d-entry-multiple">—</div></div>
+          <div class="input-divider"></div>
+          <div class="input-row locked">
+            <label>Transaction Fees</label>
+            <div class="field-wrap"><input type="number" value="2.0" readonly /><span class="field-suffix">%</span></div>
+          </div>
+          <div class="input-row locked">
+            <label>Financing Fees</label>
+            <div class="field-wrap"><input type="number" value="1.5" readonly /><span class="field-suffix">%</span></div>
+          </div>
+          <div class="input-row locked">
+            <label>Tax Rate</label>
+            <div class="field-wrap"><input type="number" value="25.0" readonly /><span class="field-suffix">%</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. DEBT SCHEDULE -->
+      <div class="panel-card">
+        <div class="panel-header">Debt Schedule <span class="badge badge-open">Open</span></div>
+        <div class="panel-body">
+          <div class="tranche-list" id="tranche-list"></div>
+          <div class="input-divider" style="margin:8px 0"></div>
+          <div class="add-tranche-row">
+            <select class="add-tranche-select" id="tranche-type-select">
+              <option value="TLA">Term Loan A</option>
+              <option value="TLB">Term Loan B</option>
+              <option value="SSN">Senior Secured Notes</option>
+              <option value="MEZ">Mezzanine</option>
+              <option value="RCF">Revolver</option>
+            </select>
+            <button class="add-tranche-btn" onclick="addTranche()">+ Add</button>
+          </div>
+          <div class="input-divider" style="margin:8px 0"></div>
+          <div class="derived-row"><label>Total Debt ($M)</label><div class="derived-value" id="d-total-debt">—</div></div>
+          <div class="derived-row"><label>Debt / EV</label><div class="derived-value" id="d-debt-ev">—</div></div>
+          <div class="derived-row"><label>Sponsor Equity ($M)</label><div class="derived-value" id="d-equity-contrib">—</div></div>
+        </div>
+      </div>
+
+      <!-- 3. OPERATING MODEL -->
+      <div class="panel-card">
+        <div class="panel-header">Operating Model <span class="badge badge-open">Open</span></div>
+        <div class="panel-body">
+          <div class="input-row">
+            <label>Year 1 Revenue ($M)</label>
+            <div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="rev-y1" class="has-prefix" value="500" step="10" oninput="softCalc()" /></div>
+          </div>
+          <div class="input-row">
+            <label>Rev. Growth — Base</label>
+            <div class="field-wrap"><input type="number" id="rev-growth-base" value="8.0" step="0.5" oninput="softCalc()" /><span class="field-suffix">%</span></div>
+          </div>
+          <div class="input-row">
+            <label>Rev. Growth — Cons.</label>
+            <div class="field-wrap"><input type="number" id="rev-growth-cons" value="4.0" step="0.5" oninput="softCalc()" /><span class="field-suffix">%</span></div>
+          </div>
+          <div class="input-row">
+            <label>Rev. Growth — Best</label>
+            <div class="field-wrap"><input type="number" id="rev-growth-best" value="12.0" step="0.5" oninput="softCalc()" /><span class="field-suffix">%</span></div>
+          </div>
+          <div class="input-divider"></div>
+          <div class="input-row">
+            <label>EBITDA Margin — Base</label>
+            <div class="field-wrap"><input type="number" id="ebitda-margin-base" value="22.0" step="0.5" oninput="softCalc()" /><span class="field-suffix">%</span></div>
+          </div>
+          <div class="input-row">
+            <label>EBITDA Margin — Cons.</label>
+            <div class="field-wrap"><input type="number" id="ebitda-margin-cons" value="18.0" step="0.5" oninput="softCalc()" /><span class="field-suffix">%</span></div>
+          </div>
+          <div class="input-row">
+            <label>EBITDA Margin — Best</label>
+            <div class="field-wrap"><input type="number" id="ebitda-margin-best" value="26.0" step="0.5" oninput="softCalc()" /><span class="field-suffix">%</span></div>
+          </div>
+          <div class="input-divider"></div>
+          <div class="input-row">
+            <label>COGS % of Revenue</label>
+            <div class="field-wrap"><input type="number" id="cogs-pct" value="55.0" step="0.5" oninput="softCalc()" /><span class="field-suffix">%</span></div>
+          </div>
+          <div class="input-row">
+            <label>OpEx % of Revenue</label>
+            <div class="field-wrap"><input type="number" id="opex-pct" value="23.0" step="0.5" oninput="softCalc()" /><span class="field-suffix">%</span></div>
+          </div>
+          <div class="input-row">
+            <label>D&amp;A % of Revenue</label>
+            <div class="field-wrap"><input type="number" id="da-pct" value="4.0" step="0.5" oninput="softCalc()" /><span class="field-suffix">%</span></div>
+          </div>
+          <div class="input-row">
+            <label>CapEx % of Revenue</label>
+            <div class="field-wrap"><input type="number" id="capex-pct" value="5.0" step="0.5" oninput="softCalc()" /><span class="field-suffix">%</span></div>
+          </div>
+          <div class="input-row">
+            <label>NWC Δ % of Revenue</label>
+            <div class="field-wrap"><input type="number" id="nwc-pct" value="1.5" step="0.5" oninput="softCalc()" /><span class="field-suffix">%</span></div>
+          </div>
+          <div class="input-row">
+            <label>Other Non-Cash ($M)</label>
+            <div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="non-cash" class="has-prefix" value="5" step="1" oninput="softCalc()" /></div>
+          </div>
+          <div class="input-row">
+            <label>Interest Income Rate</label>
+            <div class="field-wrap"><input type="number" id="int-income-rate" value="2.0" step="0.25" oninput="softCalc()" /><span class="field-suffix">%</span></div>
+          </div>
+          <div class="input-row locked">
+            <label>Minimum Cash ($M)</label>
+            <div class="field-wrap"><span class="field-prefix">$</span><input type="number" value="25" readonly /></div>
+          </div>
+          <div class="input-row locked">
+            <label>Cash Tax Rate</label>
+            <div class="field-wrap"><input type="number" value="25.0" readonly /><span class="field-suffix">%</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. EXIT ASSUMPTIONS -->
+      <div class="panel-card">
+        <div class="panel-header">Exit Assumptions <span class="badge badge-mixed">Mixed</span></div>
+        <div class="panel-body">
+          <div class="input-row">
+            <label>Exit Multiple — Base</label>
+            <div class="field-wrap"><input type="number" id="exit-mult-base" value="9.0" step="0.5" oninput="softCalc()" /><span class="field-suffix">x</span></div>
+          </div>
+          <div class="input-row">
+            <label>Exit Multiple — Cons.</label>
+            <div class="field-wrap"><input type="number" id="exit-mult-cons" value="7.5" step="0.5" oninput="softCalc()" /><span class="field-suffix">x</span></div>
+          </div>
+          <div class="input-row">
+            <label>Exit Multiple — Best</label>
+            <div class="field-wrap"><input type="number" id="exit-mult-best" value="11.0" step="0.5" oninput="softCalc()" /><span class="field-suffix">x</span></div>
+          </div>
+          <div class="input-row">
+            <label>Exit Year</label>
+            <div class="field-wrap">
+              <select id="exit-year" onchange="softCalc()">
+                <option value="3">Year 3</option>
+                <option value="4">Year 4</option>
+                <option value="5" selected>Year 5</option>
+              </select>
+            </div>
+          </div>
+          <div class="input-row locked">
+            <label>Transaction Fee @ Exit</label>
+            <div class="field-wrap"><input type="number" value="1.5" readonly /><span class="field-suffix">%</span></div>
+          </div>
+          <div class="input-row locked">
+            <label>Min. Cash Balance ($M)</label>
+            <div class="field-wrap"><span class="field-prefix">$</span><input type="number" value="25" readonly /></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end input panel -->
+
+    <!-- RIGHT CHARTS PANEL -->
+    <div class="charts-panel">
+
+      <!-- ROW 1: Exit Returns + Debt Paydown (first, above transaction structure outputs) -->
+      <div class="charts-row charts-row-2">
+        <div class="chart-card">
+          <div class="chart-title">Exit Returns by Year</div>
+          <div class="chart-wrap"><canvas id="chart-exit" height="215"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Debt Paydown Waterfall</div>
+          <div class="chart-wrap"><canvas id="chart-debt" height="215"></canvas></div>
+        </div>
+      </div>
+
+      <!-- ROW 2: Sources & Uses (follows transaction structure / debt schedule) -->
+      <div class="chart-card">
+        <div class="chart-title">Sources &amp; Uses of Funds</div>
+        <div class="su-grid">
+          <div>
+            <div class="su-block">
+              <h4>Sources</h4>
+              <div id="su-sources"></div>
+              <div class="su-total"><span>Total Sources</span><span id="su-total-sources">—</span></div>
+            </div>
+            <br/>
+            <div class="su-block">
+              <h4>Uses</h4>
+              <div id="su-uses"></div>
+              <div class="su-total"><span>Total Uses</span><span id="su-total-uses">—</span></div>
+            </div>
+          </div>
+          <div class="chart-wrap" style="max-width:280px;margin:auto;">
+            <canvas id="chart-su" height="250"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROW 3: Income Statement Table -->
+      <div class="chart-card">
+        <div class="chart-title">Projected Income Statement &amp; Cash Flow ($M)</div>
+        <div style="overflow-x:auto;">
+          <table class="output-table">
+            <thead>
+              <tr>
+                <th>Metric</th><th>Entry</th>
+                <th>Y1</th><th>Y2</th><th>Y3</th><th>Y4</th><th>Y5</th>
+              </tr>
+            </thead>
+            <tbody id="is-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ROW 4: Revenue & EBITDA + FCF Bridge (follows IS table) -->
+      <div class="charts-row charts-row-2">
+        <div class="chart-card">
+          <div class="chart-title">Revenue &amp; EBITDA Growth</div>
+          <div class="chart-wrap"><canvas id="chart-rev" height="215"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Free Cash Flow Bridge (Y1)</div>
+          <div class="chart-wrap"><canvas id="chart-fcf" height="215"></canvas></div>
+        </div>
+      </div>
+
+      <!-- ROW 5: IRR Sensitivity -->
+      <div class="chart-card">
+        <div class="chart-title">IRR Sensitivity — Exit Multiple vs. Revenue Growth</div>
+        <div class="sensitivity-wrap" id="sensitivity-wrap"></div>
+      </div>
+
+    </div><!-- end charts panel -->
+
+  </div><!-- end main grid -->
+
+  <div class="footnote">
+    <strong>Disclaimer:</strong> This model is for illustrative purposes only and does not constitute investment advice.
+    Fixed inputs: Tax Rate 25% &middot; Transaction Fees 2.0% &middot; Financing Fees 1.5% &middot; Exit Transaction Fee 1.5% &middot; Minimum Cash $25M.
+    All monetary values in USD millions unless otherwise stated. Net Debt = Total Debt &minus; Cash Balance.
+    Enterprise Value = Equity Value + Net Debt. Equity IRR computed via Newton-Raphson iteration on levered cash flows.
+  </div>
+
+</div><!-- end app -->
+
+<script>
+/* ═══════════════════════════════════════════════════
+   LBO MODEL — CALCULATION ENGINE
+═══════════════════════════════════════════════════ */
+
+const FIXED = {
+  TAX_RATE:     0.25,
+  TXN_FEES_PCT: 0.02,
+  FIN_FEES_PCT: 0.015,
+  EXIT_TXN_FEE: 0.015,
+  MIN_CASH:     25,
+};
+
+let activeCase = 'base';
+
+function setCase(c) {
+  activeCase = c;
+  ['conservative','base','best'].forEach(x => {
+    document.getElementById('btn-'+x).className =
+      'case-btn' + (x===c ? ' active-'+x : '');
+  });
+  recalculate();
+}
+
+/* Chart instances */
+const charts = {};
+Chart.defaults.color       = '#6b8f77';
+Chart.defaults.borderColor = '#dde8e1';
+Chart.defaults.font.family = "'Poppins', sans-serif";
+Chart.defaults.font.size   = 11;
+
+/* ── DEBT TRANCHES ─────────────────────────────── */
+let tranches = [
+  { id:1, type:'TLA', label:'Term Loan A', amount:300, rate:5.5, amort:10 },
+  { id:2, type:'TLB', label:'Term Loan B', amount:400, rate:6.5, amort:1  },
+];
+let nextTId = 3;
+const trancheLabels = { TLA:'Term Loan A', TLB:'Term Loan B', SSN:'Senior Secured Notes', MEZ:'Mezzanine', RCF:'Revolver' };
+
+function renderTranches() {
+  const list = document.getElementById('tranche-list');
+  list.innerHTML = '';
+  tranches.forEach(t => {
+    const d = document.createElement('div');
+    d.className = 'tranche-item';
+    d.innerHTML = `
+      <div class="tranche-header">
+        <span class="tranche-name">${t.label}</span>
+        <button class="tranche-remove" onclick="removeTranche(${t.id})">×</button>
+      </div>
+      <div class="tranche-fields">
+        <div class="tranche-field"><label>Amount ($M)</label><input type="number" value="${t.amount}" step="10" oninput="updateTranche(${t.id},'amount',this.value)"/></div>
+        <div class="tranche-field"><label>Rate (%)</label><input type="number" value="${t.rate}" step="0.25" oninput="updateTranche(${t.id},'rate',this.value)"/></div>
+        <div class="tranche-field"><label>Amort (%/yr)</label><input type="number" value="${t.amort}" step="1" oninput="updateTranche(${t.id},'amort',this.value)"/></div>
+      </div>`;
+    list.appendChild(d);
+  });
+}
+function addTranche() {
+  const type = document.getElementById('tranche-type-select').value;
+  tranches.push({ id:nextTId++, type, label:trancheLabels[type], amount:100, rate:6.0, amort:5 });
+  renderTranches(); softCalc();
+}
+function removeTranche(id) {
+  tranches = tranches.filter(t=>t.id!==id);
+  renderTranches(); softCalc();
+}
+function updateTranche(id, field, val) {
+  const t = tranches.find(x=>x.id===id);
+  if(t) t[field] = parseFloat(val)||0;
+  softCalc();
+}
+
+/* ── HELPERS ──────────────────────────────────── */
+const $v  = id => parseFloat(document.getElementById(id).value)||0;
+const fmt  = (n,d=1) => n==null||isNaN(n)?'—':n.toFixed(d);
+const fmtM = (n,d=0) => n==null||isNaN(n)?'—':'$'+n.toFixed(d)+'M';
+const fmtP = (n,d=1) => n==null||isNaN(n)?'—':n.toFixed(d)+'%';
+const fmtX = (n,d=1) => n==null||isNaN(n)?'—':n.toFixed(d)+'x';
+
+/* ── IRR ──────────────────────────────────────── */
+function calcIRR(cf) {
+  let r=0.15;
+  for(let i=0;i<200;i++){
+    let f=0,df=0;
+    cf.forEach((c,t)=>{f+=c/Math.pow(1+r,t);df+=-t*c/Math.pow(1+r,t+1);});
+    const nr=r-f/df;
+    if(Math.abs(nr-r)<1e-8) return nr;
+    r=nr;
+  }
+  return r;
+}
+
+/* ── SOFT CALC ────────────────────────────────── */
+function softCalc() {
+  const offerPrice = $v('offer-price');
+  const sharesM    = $v('shares-out');
+  const ndEntry    = $v('net-debt-entry');
+  const equityVal  = offerPrice*sharesM;
+  const ev         = equityVal+ndEntry;
+
+  document.getElementById('d-equity-val').textContent = fmtM(equityVal);
+  document.getElementById('d-ev').textContent         = fmtM(ev);
+
+  const revY1     = $v('rev-y1');
+  const mKey      = activeCase==='conservative'?'ebitda-margin-cons':activeCase==='best'?'ebitda-margin-best':'ebitda-margin-base';
+  const ebitdaY1  = revY1*($v(mKey)/100);
+  document.getElementById('d-entry-multiple').textContent = ebitdaY1>0 ? fmtX(ev/ebitdaY1) : '—';
+
+  const totalDebt  = tranches.reduce((s,t)=>s+t.amount,0);
+  document.getElementById('d-total-debt').textContent  = fmtM(totalDebt);
+  document.getElementById('d-debt-ev').textContent     = ev>0 ? fmtP(totalDebt/ev*100) : '—';
+
+  const mgmtAmt    = equityVal*($v('mgmt-rollover')/100);
+  const txnFees    = ev*FIXED.TXN_FEES_PCT;
+  const finFees    = ev*FIXED.FIN_FEES_PCT;
+  const totalUses  = ev+txnFees+finFees;
+  const equityC    = totalUses-totalDebt-mgmtAmt;
+  document.getElementById('d-equity-contrib').textContent = fmtM(Math.max(0,equityC));
+}
+
+/* ── FULL RECALCULATE ─────────────────────────── */
+function recalculate() {
+  softCalc();
+
+  const offerPrice  = $v('offer-price');
+  const sharesM     = $v('shares-out');
+  const ndEntry     = $v('net-debt-entry');
+  const equityVal   = offerPrice*sharesM;
+  const ev          = equityVal+ndEntry;
+  const mgmtAmt     = equityVal*($v('mgmt-rollover')/100);
+
+  const revY1      = $v('rev-y1');
+  const daPct      = $v('da-pct')/100;
+  const capexPct   = $v('capex-pct')/100;
+  const nwcPct     = $v('nwc-pct')/100;
+  const nonCash    = $v('non-cash');
+  const cogsPct    = $v('cogs-pct')/100;
+  const opexPct    = $v('opex-pct')/100;
+  const intIncRate = $v('int-income-rate')/100;
+  const exitYear   = parseInt(document.getElementById('exit-year').value);
+
+  const gKey  = activeCase==='conservative'?'rev-growth-cons':activeCase==='best'?'rev-growth-best':'rev-growth-base';
+  const mKey  = activeCase==='conservative'?'ebitda-margin-cons':activeCase==='best'?'ebitda-margin-best':'ebitda-margin-base';
+  const xKey  = activeCase==='conservative'?'exit-mult-cons':activeCase==='best'?'exit-mult-best':'exit-mult-base';
+
+  const revGrowth    = $v(gKey)/100;
+  const ebitdaMargin = $v(mKey)/100;
+  const exitMult     = $v(xKey);
+
+  const txnFees    = ev*FIXED.TXN_FEES_PCT;
+  const finFees    = ev*FIXED.FIN_FEES_PCT;
+  const totalDebt  = tranches.reduce((s,t)=>s+t.amount,0);
+  const totalUses  = ev+txnFees+finFees;
+  const equityC    = Math.max(0, totalUses-totalDebt-mgmtAmt);
+
+  renderSU(tranches, mgmtAmt, equityC, ev, txnFees, finFees);
+
+  /* Projections */
+  const rev=[revY1];
+  for(let y=1;y<5;y++) rev.push(rev[y-1]*(1+revGrowth));
+  const cogs   = rev.map(r=>r*cogsPct);
+  const gp     = rev.map((r,i)=>r-cogs[i]);
+  const opex   = rev.map(r=>r*opexPct);
+  const ebitda = rev.map((r,i)=>r-cogs[i]-opex[i]);
+  const da     = rev.map(r=>r*daPct);
+  const ebit   = ebitda.map((e,i)=>e-da[i]);
+
+  /* Debt schedule */
+  let dbals = tranches.map(t=>({...t,bal:t.amount}));
+  const annInt=[], debtByT=[], debtStart=[];
+  for(let y=0;y<5;y++){
+    debtStart.push(dbals.map(t=>t.bal));
+    let intY=0;
+    dbals=dbals.map(t=>{
+      intY+=t.bal*(t.rate/100);
+      return{...t,bal:Math.max(0,t.bal-t.bal*(t.amort/100))};
+    });
+    annInt.push(intY);
+    debtByT.push(dbals.map(t=>t.bal));
+  }
+
+  const ebt  = ebit.map((e,i)=>e-annInt[i]);
+  const tax  = ebt.map(e=>Math.max(0,e*FIXED.TAX_RATE));
+  const ni   = ebt.map((e,i)=>e-tax[i]);
+
+  let cash=FIXED.MIN_CASH;
+  const cashBals=[], intInc=[], fcf=[];
+  for(let y=0;y<5;y++){
+    const ii=cash*intIncRate; intInc.push(ii);
+    const f=ni[y]+da[y]-rev[y]*capexPct-rev[y]*nwcPct+nonCash+ii;
+    fcf.push(f);
+    cash=Math.max(FIXED.MIN_CASH,cash+f);
+    cashBals.push(cash);
+  }
+
+  /* Exit */
+  const xi    = exitYear-1;
+  const exEV  = ebitda[xi]*exitMult;
+  const exDebt= debtByT[xi].reduce((s,b)=>s+b,0);
+  const exEq  = exEV*(1-FIXED.EXIT_TXN_FEE)-exDebt+cashBals[xi];
+
+  /* Returns */
+  const cfs=[-equityC,...fcf.slice(0,xi),fcf[xi]+exEq];
+  while(cfs.length<exitYear+1) cfs.push(0);
+  let irr=null; try{irr=calcIRR(cfs)*100;}catch(e){}
+  const moic=exEq/equityC;
+  let cumCF=0,payback=null;
+  for(let i=1;i<cfs.length;i++){cumCF+=cfs[i];if(cumCF>=equityC&&payback===null)payback=i;}
+
+  document.getElementById('kpi-irr').textContent     = irr    ? fmt(irr)+'%' : '—';
+  document.getElementById('kpi-moic').textContent    = isFinite(moic) ? fmt(moic)+'x' : '—';
+  document.getElementById('kpi-payback').textContent = payback ? payback+'yr' : '>'+exitYear+'yr';
+
+  renderISTable(rev,cogs,gp,opex,ebitda,da,ebit,annInt,intInc,ebt,tax,ni,capexPct,nwcPct,nonCash,fcf,cashBals);
+  renderRevChart(rev,ebitda);
+  renderFCFChart(ebitda,da,rev,capexPct,nwcPct,annInt,tax,nonCash);
+  renderDebtChart(tranches,debtStart);
+  renderExitChart(rev,ebitda,exitMult,debtByT,cashBals,equityC,exitYear);
+  renderSensitivity(equityC,revY1,revGrowth,ebitdaMargin,cogsPct,opexPct,daPct,capexPct,nwcPct,nonCash,intIncRate,tranches,exitYear);
+  renderSUChart(tranches,mgmtAmt,equityC);
+}
+
+/* ── SOURCES & USES ───────────────────────────── */
+function renderSU(trancheList,mgmtAmt,equityC,ev,txnFees,finFees){
+  let html='',tot=0;
+  trancheList.forEach(t=>{html+=`<div class="su-row"><span>${t.label}</span><span>${fmtM(t.amount)}</span></div>`;tot+=t.amount;});
+  if(mgmtAmt>0){html+=`<div class="su-row"><span>Management Rollover</span><span>${fmtM(mgmtAmt)}</span></div>`;tot+=mgmtAmt;}
+  html+=`<div class="su-row"><span>Sponsor Equity</span><span>${fmtM(equityC)}</span></div>`;tot+=equityC;
+  document.getElementById('su-sources').innerHTML=html;
+  document.getElementById('su-total-sources').textContent=fmtM(tot);
+  document.getElementById('su-uses').innerHTML=`
+    <div class="su-row"><span>Purchase of Equity</span><span>${fmtM(ev)}</span></div>
+    <div class="su-row"><span>Transaction Fees (2.0%)</span><span>${fmtM(txnFees)}</span></div>
+    <div class="su-row"><span>Financing Fees (1.5%)</span><span>${fmtM(finFees)}</span></div>`;
+  document.getElementById('su-total-uses').textContent=fmtM(ev+txnFees+finFees);
+}
+
+/* ── IS TABLE ─────────────────────────────────── */
+function renderISTable(rev,cogs,gp,opex,ebitda,da,ebit,intExp,intInc,ebt,tax,ni,capexPct,nwcPct,nonCash,fcf,cashBals){
+  const rows=[
+    {label:'Revenue',         vals:rev,                   cls:''},
+    {label:'  COGS',          vals:cogs,                  cls:'is-section'},
+    {label:'Gross Profit',    vals:gp,                    cls:'is-subtotal'},
+    {label:'  OpEx',          vals:opex,                  cls:'is-section'},
+    {label:'EBITDA',          vals:ebitda,                cls:'is-subtotal'},
+    {label:'  D&A',           vals:da,                    cls:'is-section'},
+    {label:'EBIT',            vals:ebit,                  cls:'is-subtotal'},
+    {label:'  Interest Exp.', vals:intExp,                cls:'is-section'},
+    {label:'  Interest Inc.', vals:intInc,                cls:'is-section'},
+    {label:'EBT',             vals:ebt,                   cls:'is-subtotal'},
+    {label:'  Taxes',         vals:tax,                   cls:'is-section'},
+    {label:'Net Income',      vals:ni,                    cls:'is-subtotal row-highlight'},
+    {label:'  + D&A',         vals:da,                    cls:'is-section'},
+    {label:'  - CapEx',       vals:rev.map(r=>r*capexPct),cls:'is-section'},
+    {label:'  - ΔNWC',        vals:rev.map(r=>r*nwcPct),  cls:'is-section'},
+    {label:'  + Non-Cash',    vals:rev.map(()=>nonCash),  cls:'is-section'},
+    {label:'Free Cash Flow',  vals:fcf,                   cls:'row-total'},
+    {label:'Cash Balance',    vals:cashBals,              cls:''},
+  ];
+  document.getElementById('is-tbody').innerHTML=rows.map(r=>`
+    <tr class="${r.cls}">
+      <td>${r.label}</td>
+      <td style="color:var(--text-faint)">—</td>
+      ${r.vals.map(v=>`<td>$${fmt(Math.abs(v),1)}M</td>`).join('')}
+    </tr>`).join('');
+}
+
+/* ── CHART: REV & EBITDA ──────────────────────── */
+function renderRevChart(rev,ebitda){
+  const ctx=document.getElementById('chart-rev').getContext('2d');
+  if(charts.rev) charts.rev.destroy();
+  charts.rev=new Chart(ctx,{
+    data:{
+      labels:['Y1','Y2','Y3','Y4','Y5'],
+      datasets:[
+        {type:'bar', label:'Revenue',  data:rev,    backgroundColor:'rgba(0,81,42,0.16)',  borderColor:'#00512a',borderWidth:1.5,yAxisID:'y'},
+        {type:'bar', label:'EBITDA',   data:ebitda, backgroundColor:'rgba(231,210,54,0.45)',borderColor:'#b8a414',borderWidth:1.5,yAxisID:'y'},
+        {type:'line',label:'EBITDA %', data:ebitda.map((e,i)=>+(e/rev[i]*100).toFixed(1)),borderColor:'#6b8f77',borderWidth:2,pointRadius:3,tension:0.35,yAxisID:'y2'},
+      ]
+    },
+    options:chartOpts({y:{title:{display:true,text:'$M'}},y2:{position:'right',title:{display:true,text:'%'},grid:{drawOnChartArea:false}}})
+  });
+}
+
+/* ── CHART: FCF BRIDGE ────────────────────────── */
+function renderFCFChart(ebitda,da,rev,capexPct,nwcPct,intExp,tax,nonCash){
+  const ctx=document.getElementById('chart-fcf').getContext('2d');
+  if(charts.fcf) charts.fcf.destroy();
+  const capex=rev[0]*capexPct, nwc=rev[0]*nwcPct;
+  const vals=[ebitda[0],-intExp[0],-tax[0],da[0]+nonCash,-capex-nwc];
+  const labels=['EBITDA','− Interest','− Tax','+ D&A/Non-Cash','− CapEx/NWC'];
+  charts.fcf=new Chart(ctx,{
+    type:'bar',
+    data:{labels,datasets:[{data:vals,backgroundColor:vals.map(v=>v>=0?'rgba(0,81,42,0.55)':'rgba(180,40,40,0.42)'),borderColor:vals.map(v=>v>=0?'#00512a':'#b02828'),borderWidth:1.5}]},
+    options:{...chartOpts(),plugins:{legend:{display:false}}}
+  });
+}
+
+/* ── CHART: DEBT PAYDOWN ──────────────────────── */
+function renderDebtChart(trancheList,debtStart){
+  const ctx=document.getElementById('chart-debt').getContext('2d');
+  if(charts.debt) charts.debt.destroy();
+  const tC=['rgba(0,81,42,0.78)','rgba(231,210,54,0.78)','rgba(0,81,42,0.44)','rgba(194,222,206,0.9)','rgba(107,143,119,0.7)'];
+  charts.debt=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:['Y1','Y2','Y3','Y4','Y5'],
+      datasets:trancheList.map((t,i)=>({label:t.label,data:debtStart.map(yb=>yb[i]||0),backgroundColor:tC[i%tC.length],borderColor:'#ffffff',borderWidth:1}))
+    },
+    options:{...chartOpts(),scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'$M'}}}}
+  });
+}
+
+/* ── CHART: EXIT RETURNS ──────────────────────── */
+function renderExitChart(rev,ebitda,exitMult,debtByT,cashBals,equityInvested,exitYear){
+  const ctx=document.getElementById('chart-exit').getContext('2d');
+  if(charts.exit) charts.exit.destroy();
+  const irrD=[],moicD=[];
+  for(let y=1;y<=5;y++){
+    const idx=y-1;
+    const exEV=ebitda[idx]*exitMult;
+    const exDebt=(debtByT[idx]||[]).reduce((s,b)=>s+(b||0),0);
+    const exEq=exEV*(1-FIXED.EXIT_TXN_FEE)-exDebt+(cashBals[idx]||0);
+    moicD.push(+(exEq/equityInvested).toFixed(2));
+    const cfs=new Array(y+1).fill(0); cfs[0]=-equityInvested; cfs[y]=exEq;
+    try{irrD.push(+(calcIRR(cfs)*100).toFixed(1));}catch(e){irrD.push(null);}
+  }
+  charts.exit=new Chart(ctx,{
+    data:{
+      labels:['Y1','Y2','Y3','Y4','Y5'],
+      datasets:[
+        {type:'line',label:'IRR (%)',  data:irrD,  borderColor:'#00512a',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#00512a',tension:0.35,yAxisID:'y'},
+        {type:'line',label:'MOIC (x)', data:moicD, borderColor:'#b8a414',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#b8a414',tension:0.35,yAxisID:'y2'},
+      ]
+    },
+    options:chartOpts({y:{title:{display:true,text:'IRR %'}},y2:{position:'right',title:{display:true,text:'MOIC x'},grid:{drawOnChartArea:false}}})
+  });
+}
+
+/* ── CHART: DONUT S&U ─────────────────────────── */
+function renderSUChart(trancheList,mgmtAmt,equityC){
+  const ctx=document.getElementById('chart-su').getContext('2d');
+  if(charts.su) charts.su.destroy();
+  const labels=[...trancheList.map(t=>t.label),'Mgmt Rollover','Sponsor Equity'];
+  const data  =[...trancheList.map(t=>t.amount),mgmtAmt,Math.max(0,equityC)];
+  const colors=['#00512a','#e7d236','#6b8f77','#c2dece','#a8c4b0','#4a8060'];
+  charts.su=new Chart(ctx,{
+    type:'doughnut',
+    data:{labels,datasets:[{data,backgroundColor:colors.slice(0,labels.length),borderColor:'#ffffff',borderWidth:2}]},
+    options:{plugins:{legend:{position:'bottom',labels:{boxWidth:11,padding:10,color:'#2d5e3a'}}},cutout:'60%'}
+  });
+}
+
+/* ── SENSITIVITY ──────────────────────────────── */
+function renderSensitivity(equityInvested,revY1,baseGrowth,ebitdaMargin,cogsPct,opexPct,daPct,capexPct,nwcPct,nonCash,intIncRate,trancheList,exitYear){
+  const xKey=activeCase==='conservative'?'exit-mult-cons':activeCase==='best'?'exit-mult-best':'exit-mult-base';
+  const bxm=$v(xKey);
+  const multRange=[-2,-1,0,+1,+2].map(d=>bxm+d);
+  const growthRange=[-4,-2,0,+2,+4].map(d=>baseGrowth*100+d);
+  let html='<table class="sens-table"><thead><tr><th>IRR</th>';
+  multRange.forEach(m=>html+=`<th>${m.toFixed(1)}x</th>`);
+  html+='</tr></thead><tbody>';
+  growthRange.forEach(g=>{
+    html+=`<tr><td class="sens-axis">${g.toFixed(1)}% Gth</td>`;
+    multRange.forEach(xm=>{
+      const rv=[revY1]; for(let y=1;y<5;y++) rv.push(rv[y-1]*(1+g/100));
+      const eb=rv.map(r=>r*ebitdaMargin);
+      const da=rv.map(r=>r*daPct);
+      const ei=eb.map((e,i)=>e-da[i]);
+      let bl=trancheList.map(t=>({...t,bal:t.amount}));
+      const ai=[];
+      for(let y=0;y<5;y++){
+        let intY=0;
+        bl=bl.map(t=>{intY+=t.bal*(t.rate/100);return{...t,bal:Math.max(0,t.bal-t.bal*(t.amort/100))};});
+        ai.push(intY);
+      }
+      const dEnd=bl.reduce((s,t)=>s+t.bal,0);
+      let cash=FIXED.MIN_CASH; const fcf=[];
+      for(let y=0;y<5;y++){
+        const ebt=ei[y]-ai[y]; const ni=ebt-Math.max(0,ebt*FIXED.TAX_RATE);
+        const f=ni+da[y]-rv[y]*capexPct-rv[y]*nwcPct+nonCash+cash*intIncRate;
+        cash=Math.max(FIXED.MIN_CASH,cash+f); fcf.push(f);
+      }
+      const xi=exitYear-1;
+      const exEq=eb[xi]*xm*(1-FIXED.EXIT_TXN_FEE)-dEnd+cash;
+      const cfs=[-equityInvested,...fcf.slice(0,xi),fcf[xi]+exEq];
+      let irr=null; try{irr=calcIRR(cfs)*100;}catch(e){}
+      const hc=irr==null?'':irr>=25?'heat-best':irr>=20?'heat-high':irr>=15?'heat-mid':'heat-low';
+      html+=`<td class="${hc}">${irr!=null?irr.toFixed(1)+'%':'—'}</td>`;
+    });
+    html+='</tr>';
+  });
+  html+='</tbody></table>';
+  document.getElementById('sensitivity-wrap').innerHTML=html;
+}
+
+/* ── CHART OPTIONS (LIGHT) ────────────────────── */
+function chartOpts(scales={}) {
+  return {
+    responsive:true,
+    interaction:{mode:'index',intersect:false},
+    plugins:{
+      legend:{position:'bottom',labels:{boxWidth:10,padding:12,color:'#2d5e3a'}},
+      tooltip:{backgroundColor:'#ffffff',borderColor:'#dde8e1',borderWidth:1,padding:10,titleColor:'#0a1a0f',bodyColor:'#6b8f77'}
+    },
+    scales:{
+      x:{grid:{color:'rgba(221,232,225,0.7)'},ticks:{color:'#6b8f77'}},
+      y:{grid:{color:'rgba(221,232,225,0.7)'},ticks:{color:'#6b8f77'},...(scales.y||{})},
+      ...(scales.y2?{y2:{grid:{color:'rgba(221,232,225,0.4)'},ticks:{color:'#6b8f77'},...scales.y2}}:{})
+    }
+  };
+}
+
+/* ── INIT ─────────────────────────────────────── */
+renderTranches();
+recalculate();
+</script>
+</body>
+</html>

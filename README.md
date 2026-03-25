@@ -2,11 +2,13 @@ A simple, interactive **Leveraged Buyout (LBO) model** built as a web applicatio
 
 🔗 Live Demo: https://johannsomosa.github.io/LBO-Model/
 
+---
+
 ## 📌 Overview
 
 This project is a light financial modeling tool I designed to assist investors by providing foresight into prospective LBO deals.
 
-A leveraged buyout (LBO) is the acquisition of a company using a significant amount of debt financing to increase potential returns on equity. :contentReference[oaicite:0]{index=0}
+A leveraged buyout (LBO) is the acquisition of a company using a significant amount of debt financing to increase potential returns on equity. 
 
 This web app simplifies that concept into an interactive interface where users can adjust key assumptions and instantly see valuation outputs. With real-time output calculation and dynamic chart visualization this app aims at providing light and fast calculations for prospective deals.
 

@@ -1,2 +1,13 @@
-# LBO-Model
-A browser-based leveraged buyout (LBO) model with dynamic inputs, valuation outputs, and revenue growth visualization, built with HTML, CSS, and JavaScript.
+# LBO Model (Web App)
+
+## Overview
+Simple browser-based leveraged buyout (LBO) model with:
+- Inputs
+- Outputs
+- Chart visualization
+
+## Run
+Open index.html
+
+## Deploy
+Upload to GitHub → Settings → Pages → main branch
